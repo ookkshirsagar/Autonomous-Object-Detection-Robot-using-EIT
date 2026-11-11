@@ -1,0 +1,7 @@
+# Raspberry Pi runtime for robot/hidden_hunter.py
+RPi.GPIO
+adafruit-blinka
+adafruit-circuitpython-vl53l0x
+mpu6050-raspberrypi
+pyserial
+paho-mqtt>=1.6,<2   # code uses the v1 callback API

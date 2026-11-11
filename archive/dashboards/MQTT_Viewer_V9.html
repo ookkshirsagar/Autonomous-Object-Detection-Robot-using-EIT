@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADMM Impedance Data Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #fbfdff;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 800px; /* Increased width */
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            margin-top: 0;
+            color: #007bff;
+        }
+        #mqtt-status {
+            background-color: #007bff;
+            color: #fff;
+            padding: 10px;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        #status {
+            padding: 10px;
+            border: 1px solid #fffefe;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .message-box {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 20px;
+            background-color: #f0f0f0;
+            margin-bottom: 20px;
+        }
+        .message-box h2 {
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 8px 8px 0 0;
+            margin: 0;
+            border-bottom: 1px solid #ccc;
+        }
+        .message {
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            background-color: #fff;
+            border-radius: 8px;
+        }
+        .timestamp {
+            font-size: 0.9em;
+            color: #666;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-top: 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Styling for different sections */
+        #reference-voltage-box {
+            background-color: rgb(250, 214, 147); /* Orange background */
+        }
+
+        #detected-objects {
+            margin-bottom: 20px;
+        }
+
+        .detected-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            margin-bottom: 20px;
+        }
+
+        .detected-table th,
+        .detected-table td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .detected-table th {
+            background-color: #007bff; /* Blue header */
+            color: #fff;
+        }
+
+        .detected-table-light-red {
+            background-color: #f29393; /* Light red for conductive objects table */
+            color: #fff;
+        }
+
+        .detected-table-light-green {
+            background-color: #8bc34a; /* Light green for non-conductive objects table */
+            color: #fff;
+        }
+
+        #download-button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-top: 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+
+        #download-button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ADMM Impedance Data Viewer</h1>
+        <div id="mqtt-status">
+            <h2>MQTT Status</h2>
+            <div id="status">Connecting to MQTT broker...</div>
+        </div>
+        
+        <!-- Reference Voltage Block -->
+        <div class="message-box" id="reference-voltage-box" style="display: none;">
+            <h2>Reference Voltage</h2>
+            <div id="reference-voltage">
+                <!-- Reference voltage content will be inserted here -->
+            </div>
+        </div>
+        
+        <!-- Detected Objects Block -->
+        <div class="message-box">
+            <h2>Detected Objects</h2>
+            <div id="detected-objects">
+                <table id="detected-conductive-table" class="detected-table detected-table-light-red">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Voltage</th>
+                            <th>Position</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Detected conductive objects content will be inserted here -->
+                    </tbody>
+                </table>
+
+                <table id="detected-nonconductive-table" class="detected-table detected-table-light-green">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Voltage</th>
+                            <th>Position</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Detected non-conductive objects content will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+            <button id="download-button">Download Detected Objects (Excel)</button>
+        </div>
+        
+        <div class="message-box">
+            <h2>Latest Measurement</h2>
+            <table id="current-message-table" class="detected-table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Voltage</th>
+                        <th>Position</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Latest measurement content will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="message-box">
+            <h2>Past Measurements</h2>
+            <table id="past-messages">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Voltage</th>
+                        <th>Position</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Past messages content will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+
+        <button id="clear-screen">Clear Screen</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.2.6/mqtt.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
+    <script>
+        const statusDiv = document.getElementById('status');
+        const currentMessageTableBody = document.querySelector('#current-message-table tbody');
+        const pastMessagesTableBody = document.querySelector('#past-messages tbody');
+        const referenceVoltageDiv = document.getElementById('reference-voltage');
+        const referenceVoltageBox = document.getElementById('reference-voltage-box');
+        const detectedConductiveTableBody = document.querySelector('#detected-conductive-table tbody');
+        const detectedNonConductiveTableBody = document.querySelector('#detected-nonconductive-table tbody');
+        const clearScreenButton = document.getElementById('clear-screen');
+        const downloadButton = document.getElementById('download-button');
+
+        // Arrays to store detected objects
+        const conductiveObjects = [];
+        const nonConductiveObjects = [];
+
+        // MQTT Broker details
+        const MQTT_BROKER = "YOUR-CLUSTER.s1.eu.hivemq.cloud";
+        const MQTT_PORT = 8884;
+        const MQTT_TOPIC = "getdata";
+        const MQTT_USERNAME = "YOUR_USERNAME";
+        const MQTT_PASSWORD = "YOUR_PASSWORD";
+
+        // Create MQTT client instance
+        const client = mqtt.connect(`wss://${MQTT_BROKER}:${MQTT_PORT}/mqtt`, {
+            username: MQTT_USERNAME,
+            password: MQTT_PASSWORD,
+            clientId: `mqtt_${Math.random().toString(16).substr(2, 8)}`,  // Random client ID
+            reconnectPeriod: 1000,  // Reconnect every 1 second
+            connectTimeout: 30 * 1000,  // 30 seconds timeout
+        });
+
+        // Log connection attempt
+        console.log('Attempting to connect to MQTT broker...');
+        statusDiv.textContent = 'Attempting to connect to MQTT broker...';
+
+        // Variable to store reference voltage
+        let referenceVoltage = null;
+        let isFirstMessage = true;
+
+        // When connected, subscribe to the MQTT topic
+        client.on('connect', function () {
+            console.log('Connected to MQTT broker');
+            statusDiv.textContent = 'Connected to MQTT broker';
+            statusDiv.style.color = '#000000'; // Change text color to dark black
+            clearScreenButton.disabled = false;
+
+            client.subscribe(MQTT_TOPIC, function (err) {
+                if (err) {
+                    console.error('Subscribe error:', err);
+                    statusDiv.textContent = 'Error subscribing to topic';
+                } else {
+                    console.log(`Subscribed to topic ${MQTT_TOPIC}`);
+                }
+            });
+        });
+
+        // When a message is received, display it on the webpage
+        client.on('message', function (topic, message) {
+            console.log('Received message:', message.toString());
+
+            const messageText = message.toString();
+
+            // Extract voltage and position from the message text
+            const regex = /Voltage: ([\d.]+)V, Position: \(([\d.-]+), ([\d.-]+)\)/;
+            const match = messageText.match(regex);
+
+            if (match) {
+                const timestamp = new Date().toLocaleString();
+                const voltage = parseFloat(match[1]); // Parse voltage as float
+                const positionX = match[2];
+                const positionY = match[3];
+
+                // Set the first message voltage as the reference voltage
+                if (isFirstMessage) {
+                    referenceVoltage = voltage;
+                    isFirstMessage = false; // Set isFirstMessage to false after setting referenceVoltage
+
+                    // Show the reference voltage box and update its content
+                    referenceVoltageDiv.innerHTML = `Reference Voltage: ${referenceVoltage.toFixed(2)}V`;
+                    referenceVoltageBox.style.display = 'block';
+                }
+
+                // Determine object type based on voltage comparison with reference
+                const voltageDifference = voltage - referenceVoltage;
+                if (!isFirstMessage && Math.abs(voltageDifference) >= 50) {
+                    let objectType, tableBody;
+                    if (voltage > referenceVoltage) {
+                        objectType = 'Non-Conductive Object';
+                        tableBody = detectedNonConductiveTableBody;
+                        detectedNonConductiveTableBody.className = 'detected-table detected-table-light-green'; // Green for Non-Conductive Object
+                    } else {
+                        objectType = 'Conductive Object';
+                        tableBody = detectedConductiveTableBody;
+                        detectedConductiveTableBody.className = 'detected-table detected-table-light-red'; // Red for Conductive Object
+                    }
+
+                    // Store object in respective array for download
+                    const object = {
+                        timestamp: timestamp,
+                        voltage: voltage,
+                        positionX: positionX,
+                        positionY: positionY
+                    };
+
+                    if (objectType === 'Non-Conductive Object') {
+                        nonConductiveObjects.push(object);
+                    } else {
+                        conductiveObjects.push(object);
+                    }
+
+                    // Prepare detected object message
+                    const objectMessage = `${objectType}: Voltage ${voltage.toFixed(2)}V, Position (${positionX}, ${positionY})`;
+
+                    // Display detected object message in the respective table
+                    const row = createTableRow(object);
+                    tableBody.appendChild(row);
+                }
+
+                // Prepare table row for past messages
+                const newRow = document.createElement('tr');
+                const timestampCell = document.createElement('td');
+                timestampCell.textContent = timestamp;
+                const voltageCell = document.createElement('td');
+                voltageCell.textContent = voltage.toFixed(2) + 'V'; // Display voltage with two decimal places
+                const positionCell = document.createElement('td');
+                positionCell.textContent = `(${positionX}, ${positionY})`;
+
+                newRow.appendChild(timestampCell);
+                newRow.appendChild(voltageCell);
+                newRow.appendChild(positionCell);
+
+                // Insert new row at the top of the table
+                pastMessagesTableBody.insertBefore(newRow, pastMessagesTableBody.firstChild);
+
+                // Display latest message in the current message section
+                const currentRow = createTableRow({ timestamp: timestamp, voltage: voltage, positionX: positionX, positionY: positionY });
+                clearTableRows(currentMessageTableBody);
+                currentMessageTableBody.appendChild(currentRow);
+            } else {
+                console.error('Message format does not match expected pattern');
+            }
+        });
+
+        // Error handling
+        client.on('error', function (error) {
+            console.error('MQTT client error:', error);
+            statusDiv.textContent = `MQTT client error: ${error.message}`;
+        });
+
+        client.on('offline', function () {
+            console.error('MQTT client is offline');
+            statusDiv.textContent = 'MQTT client is offline';
+        });
+
+        client.on('reconnect', function () {
+            console.log('MQTT client is reconnecting');
+            statusDiv.textContent = 'MQTT client is reconnecting...';
+        });
+
+        client.on('close', function () {
+            console.log('MQTT client is closed');
+            statusDiv.textContent = 'MQTT client is closed';
+            document.body.style.backgroundColor = 'red'; // Set whole page background to red on MQTT client close
+        });
+
+        // Button to clear the screen
+        clearScreenButton.addEventListener('click', function () {
+            location.reload(); // Refresh the webpage
+        });
+
+        // Download button functionality
+        downloadButton.addEventListener('click', function () {
+            const workbook = XLSX.utils.book_new();
+
+            // Convert arrays to worksheet
+            const conductiveWorksheet = XLSX.utils.json_to_sheet(conductiveObjects);
+            const nonConductiveWorksheet = XLSX.utils.json_to_sheet(nonConductiveObjects);
+
+            // Add worksheets to workbook
+            XLSX.utils.book_append_sheet(workbook, conductiveWorksheet, 'Conductive Objects');
+            XLSX.utils.book_append_sheet(workbook, nonConductiveWorksheet, 'Non-Conductive Objects');
+
+            // Save workbook as Excel file
+            XLSX.writeFile(workbook, 'detected_objects.xlsx');
+        });
+
+        // Function to clear all rows from a table body
+        function clearTableRows(tableBody) {
+            while (tableBody.firstChild) {
+                tableBody.removeChild(tableBody.firstChild);
+            }
+        }
+
+        // Function to create table row from object data
+        function createTableRow(obj) {
+            const row = document.createElement('tr');
+            const timestampCell = document.createElement('td');
+            timestampCell.textContent = obj.timestamp;
+            const voltageCell = document.createElement('td');
+            voltageCell.textContent = obj.voltage.toFixed(2) + 'V';
+            const positionCell = document.createElement('td');
+            positionCell.textContent = `(${obj.positionX}, ${obj.positionY})`;
+
+            row.appendChild(timestampCell);
+            row.appendChild(voltageCell);
+            row.appendChild(positionCell);
+
+            return row;
+        }
+    </script>
+</body>
+</html>

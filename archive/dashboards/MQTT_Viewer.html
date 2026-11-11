@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MQTT Data Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        #status {
+            margin: 20px 0;
+            padding: 10px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+        }
+        #data {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-top: 20px;
+            min-height: 100px;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-top: 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MQTT Data Viewer</h1>
+        <div id="status">Connecting to MQTT broker...</div>
+        <button id="check-output" disabled>Check Output</button>
+        <div id="data"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.2.6/mqtt.min.js"></script>
+    <script>
+        // MQTT Broker details
+        const MQTT_BROKER = "YOUR-CLUSTER.s1.eu.hivemq.cloud";
+        const MQTT_PORT = 8884;
+        const MQTT_TOPIC = "getdata";
+        const MQTT_USERNAME = "YOUR_USERNAME";
+        const MQTT_PASSWORD = "YOUR_PASSWORD";
+
+        const statusDiv = document.getElementById('status');
+        const dataDiv = document.getElementById('data');
+        const checkOutputButton = document.getElementById('check-output');
+
+        // Create MQTT client instance
+        const client = mqtt.connect(`wss://${MQTT_BROKER}:${MQTT_PORT}/mqtt`, {
+            username: MQTT_USERNAME,
+            password: MQTT_PASSWORD,
+            clientId: `mqtt_${Math.random().toString(16).substr(2, 8)}`,  // Random client ID
+            reconnectPeriod: 1000,  // Reconnect every 1 second
+            connectTimeout: 30 * 1000,  // 30 seconds timeout
+        });
+
+        // Log connection attempt
+        console.log('Attempting to connect to MQTT broker...');
+        statusDiv.textContent = 'Attempting to connect to MQTT broker...';
+
+        // When connected, subscribe to the MQTT topic
+        client.on('connect', function () {
+            console.log('Connected to MQTT broker');
+            statusDiv.textContent = 'Connected to MQTT broker';
+            checkOutputButton.disabled = false;
+
+            client.subscribe(MQTT_TOPIC, function (err) {
+                if (err) {
+                    console.error('Subscribe error:', err);
+                    statusDiv.textContent = 'Error subscribing to topic';
+                } else {
+                    console.log(`Subscribed to topic ${MQTT_TOPIC}`);
+                }
+            });
+        });
+
+        // When a message is received, display it on the webpage
+        client.on('message', function (topic, message) {
+            console.log('Received message:', message.toString());
+            dataDiv.innerHTML = `<p>Received message: ${message.toString()}</p>`;
+        });
+
+        // Error handling
+        client.on('error', function (error) {
+            console.error('MQTT client error:', error);
+            statusDiv.textContent = `MQTT client error: ${error.message}`;
+        });
+
+        client.on('offline', function () {
+            console.error('MQTT client is offline');
+            statusDiv.textContent = 'MQTT client is offline';
+        });
+
+        client.on('reconnect', function () {
+            console.log('MQTT client is reconnecting');
+            statusDiv.textContent = 'MQTT client is reconnecting...';
+        });
+
+        client.on('close', function () {
+            console.log('MQTT client is closed');
+            statusDiv.textContent = 'MQTT client is closed';
+        });
+
+        // Button to check output
+        checkOutputButton.addEventListener('click', function () {
+            dataDiv.innerHTML = '<p>Waiting for new message...</p>';
+            // You can add additional logic here if needed
+        });
+    </script>
+</body>
+</html>
